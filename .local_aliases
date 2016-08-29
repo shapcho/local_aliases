@@ -4,6 +4,11 @@ else
 	echo proxy settings not found
 fi
 
+# set PATH so it includes user's private bin if it exists
+if [ -d "$HOME/kbin" ] ; then
+    PATH="$HOME/kbin:$PATH"
+fi
+
 script_dir=$( dirname "${BASH_SOURCE[0]}")
 
 PATH=$PATH:$script_dir
@@ -61,8 +66,8 @@ kpush(){
 
 kset(){
 
-	if [ -f ~/.ktools/$1.sh ]; then
-		echo "~/.ktools/$1.sh \$1" > /home/users/kdyakov/.ktools/curr_k_project.sh
+	if [ -f ~/$script_dir/$1.sh ]; then
+		echo "~/$script_dir/$1.sh \$1" > /home/users/kdyakov/$script_dir/curr_k_project.sh
 		sudo mv /sbin/adb /sbin/adb_last
 		sudo ln -s `curr_k_project.sh adb_tool` /sbin/adb
 		alias kfboot=`curr_k_project.sh fastboot_tool`
@@ -70,7 +75,7 @@ kset(){
 		sudo update-alternatives --set javac `curr_k_project.sh javac_path`
 	else
 		echo "The following project file doesn't exists:"
-		echo " ~/.ktools/$1.sh"
+		echo " ~/$script_dir/$1.sh"
 	fi
 }
 
