@@ -66,8 +66,8 @@ kpush(){
 
 kset(){
 
-	if [ -f ~/$script_dir/$1.sh ]; then
-		echo "~/$script_dir/$1.sh \$1" > /home/users/kdyakov/$script_dir/curr_k_project.sh
+	if [ -f $script_dir/$1.sh ]; then
+		echo "$script_dir/$1.sh \$1" > $script_dir/curr_k_project.sh
 		sudo mv /sbin/adb /sbin/adb_last
 		sudo ln -s `curr_k_project.sh adb_tool` /sbin/adb
 		alias kfboot=`curr_k_project.sh fastboot_tool`
@@ -75,7 +75,7 @@ kset(){
 		sudo update-alternatives --set javac `curr_k_project.sh javac_path`
 	else
 		echo "The following project file doesn't exists:"
-		echo " ~/$script_dir/$1.sh"
+		echo " $script_dir/$1.sh"
 	fi
 }
 
