@@ -1,1 +1,264 @@
+if [ -f ~/.proxy_settings ]; then
+	source ~/.proxy_settings
+else
+	echo proxy settings not found
+fi
 
+script_dir=$( dirname "${BASH_SOURCE[0]}")
+
+PATH=$PATH:$script_dir
+
+PATH=~/.ktools/qt_win_tools/mxe/usr/bin:$PATH
+
+#alias curr_k_project.sh="~/.kprojects/`cat ~/.kprojects/project`.sh"
+alias kfboot=`curr_k_project.sh fastboot_tool`
+
+kmm(){
+   mm 2>&1 | grep "Install: out" | tee "`curr_k_project.sh root_folder`/so_files.txt"
+}
+
+kpush(){
+	adb wait-for-device root
+	adb wait-for-device remount
+
+	k_dbg_print="OFF"
+        do_reboot="OFF"
+
+	for passed_arg in $*
+	do
+		if [ $passed_arg == "-v" ]; then
+			k_dbg_print="ON"
+		elif [ $passed_arg == "-r" ]; then
+			do_reboot="ON"
+		fi
+	done
+
+	file_map="`curr_k_project.sh root_folder`/so_files.txt"
+	so_files=`cat $file_map`
+
+	for curr_key in $so_files
+	do
+
+		file_to_push="`curr_k_project.sh root_folder`/$curr_key"
+		push_dest=`echo $curr_key | sed s:.*/system:system:`
+
+		if [ -f "$file_to_push" ]; then
+		   if [ $k_dbg_print == "ON" ]; then
+			   echo -e "pushing:\n     $file_to_push\nto\n     $push_dest"
+		   fi
+		   adb shell ls $push_dest -la
+		   sudo adb push $file_to_push $push_dest
+		   adb shell ls $push_dest -la
+		fi
+	done
+	echo adb shell sync
+
+	if [ $do_reboot == "ON" ]; then
+		sudo adb reboot
+	fi
+
+}
+
+kset(){
+
+	if [ -f ~/.ktools/$1.sh ]; then
+		echo "~/.ktools/$1.sh \$1" > /home/users/kdyakov/.ktools/curr_k_project.sh
+		sudo mv /sbin/adb /sbin/adb_last
+		sudo ln -s `curr_k_project.sh adb_tool` /sbin/adb
+		alias kfboot=`curr_k_project.sh fastboot_tool`
+		sudo update-alternatives --set java `curr_k_project.sh java_path`
+		sudo update-alternatives --set javac `curr_k_project.sh javac_path`
+	else
+		echo "The following project file doesn't exists:"
+		echo " ~/.ktools/$1.sh"
+	fi
+}
+
+kgrep(){
+
+	exclude_files=(
+		 "eztune_items_*.c"
+	)
+
+	exclude_dirs=(
+		 ".git"
+	)
+
+	include_files=(
+#			"*.h"
+#			"*.c"
+#			"*.java"
+#			"*.xml"
+	)
+
+
+	declare grep_config_str
+
+	for ((i=2; i<=$#;i++))
+	do
+		grep_config_str=$grep_config_str" ${!i}"
+	done
+
+	for i in "${exclude_files[@]}"; do
+		 grep_config_str=$grep_config_str" --exclude \"$i\""
+	done
+
+	for i in "${exclude_dirs[@]}"; do
+		 grep_config_str=$grep_config_str" --exclude-dir \"$i\""
+	done
+
+	for i in "${include_files[@]}"; do
+		 grep_config_str=$grep_config_str" --include \"$i\""
+	done
+
+        grep_config_str="grep -rn $1 . $grep_config_str"
+
+	eval $grep_config_str
+}
+
+
+krs(){
+	time ionice -c 2 -n 0 nice repo sync -j7 -c -q
+}
+
+kl(){
+	curr_dir=`pwd`
+	cd `curr_k_project.sh root_folder`
+
+	source `curr_k_project.sh set_env`
+	`curr_k_project.sh lunch_cmd`
+
+	cd $curr_dir
+
+}
+
+kbuild(){
+
+	if [ `curr_k_project.sh build_specific` == "Yes" ] ;then
+		curr_k_project.sh build_project_specific
+	else
+		curr_dir=`pwd`
+                cd `curr_k_project.sh root_folder`
+		kl
+		time ionice -c 2 -n 0 nice make -j4
+		cd $curr_dir
+	fi
+}
+
+
+kflash(){
+
+    curr_dir=`pwd`
+    flash_imgs_dir=`curr_k_project.sh flashimgs_folder`
+
+    echo -e "\nImages from the following folder will be flashed\n  $flash_imgs_dir"
+    read -p "Do you want to continue[Yes\No]:" YN
+
+    if [[ $YN =~ ^(Y|y) ]]; then
+	echo -e "Starting flash procedure"
+    else
+	echo -e "Aborting flash"
+	return 1
+    fi
+
+    kproj_fastboot_tool=`curr_k_project.sh fastboot_tool`
+
+    cd $flash_imgs_dir
+
+    if [ `curr_k_project.sh flash_specific` == "Yes"  ]; then
+	curr_k_project.sh fb_project_specific
+
+    else
+	    sudo adb kill-server
+	    sudo adb reboot bootloader
+
+	    curr_key=$*
+
+	    if [[ $1 == 'all' || -z $curr_key  ]]; then
+		echo  Flashing bootloader .....
+		$kproj_fastboot_tool flash aboot emmc_appsboot.mbn
+
+		echo  Flashing kernel .....
+		$kproj_fastboot_tool flash boot boot.img
+
+		echo  Flashing recovery image .....
+		$kproj_fastboot_tool flash recovery recovery.img
+
+		echo  Flashing system image .....
+		$kproj_fastboot_tool flash system system.img
+
+		echo  Flashing userdata image .....
+		$kproj_fastboot_tool flash userdata userdata.img
+
+		echo  Flashing cache image .....
+		$kproj_fastboot_tool flash cache cache.img
+	    else
+		    for curr_key in $*
+		      do
+
+			if [ $curr_key == "boot" ]; then
+				if [ -f boot.img ];then
+					echo  Flashing boot image .....
+					$kproj_fastboot_tool flash boot boot.img
+				else
+					echo -e "\n there is no boot.img in the current dir\n"
+				fi
+
+			elif [ $curr_key == "system" ]; then
+				if [ -f system.img ];then
+					echo  Flashing system image .....
+					$kproj_fastboot_tool flash system system.img
+				else
+					echo -e "\n there is no system.img\n"
+				fi
+
+			else
+				echo -e "\nunrecognized argument $1\n"
+				return 1
+			fi
+		    done
+	    fi
+
+	  echo  Reboot to new OS...
+	  $kproj_fastboot_tool reboot
+
+  fi
+
+  cd $curr_dir
+
+}
+
+kmap(){
+  if [ "$1" == "MSI" ]; then
+	sudo sshfs -o allow_other kdyakov@172.20.0.8:/home/users/kdyakov/work/MSI/ /mnt/MSI-remote/
+  else
+     echo No such project
+  fi
+
+}
+
+
+kpull() {
+
+	foldername="`curr_k_project.sh jpeg_folder`/$(date +%Y%m%d)_$1"
+	mkdir "$foldername"
+	sudo adb wait-for-device
+	sudo adb pull sdcard/DCIM/camera "$foldername"
+	nautilus "$foldername" &
+	echo -e "\nsdcard/DCIM/camera will be removed"
+	read -p "press any key to continue "
+	adb shell rm sdcard/DCIM/camera/*
+
+}
+
+dccsync()
+{
+	mv cid1078_ar0134*.bin /media/kdyakov/3436-6636/R5_MVEN002_LD2_ND0_IR0_SH0_FL0_SVEN002_DCCID1078/
+	sync
+#	sudo umount /media/kdyakov/3436-6636
+}
+
+
+kmm(){
+   mm 2>&1 | grep "Install: out" | tee "`curr_k_project.sh root_folder`/so_files.txt"
+}
