@@ -71,8 +71,19 @@ kset(){
 		sudo mv /sbin/adb /sbin/adb_last
 		sudo ln -s `curr_k_project.sh adb_tool` /sbin/adb
 		alias kfboot=`curr_k_project.sh fastboot_tool`
-		sudo update-alternatives --set java `curr_k_project.sh java_path`
-		sudo update-alternatives --set javac `curr_k_project.sh javac_path`
+
+		export JAVA_HOME=`curr_k_project.sh java_path`
+		export JAVAC_HOME=`curr_k_project.sh javac_path`
+		export ANDROID_JAVA_HOME=$JAVA_HOME
+		export PATH=$JAVAC_HOME/bin:$JAVA_HOME/bin:$PATH
+
+		sudo rm -d /usr/bin/java /usr/bin/javac /usr/bin/javaws
+		sudo ln -s $JAVAC_HOME/bin/java /usr/bin/java
+		sudo ln -s $JAVAC_HOME/bin/javac /usr/bin/javac
+		sudo ln -s $JAVAC_HOME/bin/javaws /usr/bin/javaws
+
+#		sudo update-alternatives --set java `curr_k_project.sh java_path`
+#		sudo update-alternatives --set javac `curr_k_project.sh javac_path`
 	else
 		echo "The following project file doesn't exists:"
 		echo " $script_dir/$1.sh"
@@ -145,7 +156,7 @@ kbuild(){
 		curr_dir=`pwd`
                 cd `curr_k_project.sh root_folder`
 		kl
-		time ionice -c 2 -n 0 nice make -j4
+		kmake
 		cd $curr_dir
 	fi
 }
