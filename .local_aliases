@@ -1,5 +1,5 @@
-if [ -f ~/.proxy_settings ]; then
-	source ~/.proxy_settings
+if [ -f ~/linux_aliases/local_aliases/.proxy_settings ]; then
+	source ~/linux_aliases/local_aliases/.proxy_settings
 else
 	echo proxy settings not found
 fi
@@ -68,8 +68,10 @@ kset(){
 
 	if [ -f $script_dir/$1.sh ]; then
 		echo "$script_dir/$1.sh \$1" > $script_dir/curr_k_project.sh
-		sudo mv /sbin/adb /sbin/adb_last
+		sudo rm -d /sbin/adb
+		sudo rm -d /usr/bin/adb
 		sudo ln -s `curr_k_project.sh adb_tool` /sbin/adb
+		sudo ln -s `curr_k_project.sh adb_tool` /usr/bin/adb
 		alias kfboot=`curr_k_project.sh fastboot_tool`
 
 		export JAVA_HOME=`curr_k_project.sh java_path`
