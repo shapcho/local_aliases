@@ -1,21 +1,15 @@
-if [ -f ~/.proxy_settings ]; then
-	source ~/.proxy_settings
+
+if [ -f $local_aliases_path/.proxy_settings ]; then
+	source $local_aliases_path/.proxy_settings
 else
 	echo proxy settings not found
-fi
-
-# set PATH so it includes user's private bin if it exists
-if [ -d "$HOME/kbin" ] ; then
-    PATH="$HOME/kbin:$PATH"
+	echo the expected destination is $local_aliases_path/.proxy_settings
 fi
 
 script_dir=$( dirname "${BASH_SOURCE[0]}")
 
 PATH=$PATH:$script_dir
 
-PATH=~/.ktools/qt_win_tools/mxe/usr/bin:$PATH
-
-#alias curr_k_project.sh="~/.kprojects/`cat ~/.kprojects/project`.sh"
 alias kfboot=`curr_k_project.sh fastboot_tool`
 
 kmm(){
@@ -68,11 +62,25 @@ kset(){
 
 	if [ -f $script_dir/$1.sh ]; then
 		echo "$script_dir/$1.sh \$1" > $script_dir/curr_k_project.sh
-		sudo mv /sbin/adb /sbin/adb_last
+		sudo chmod a+x $script_dir/curr_k_project.sh
+		sudo rm -d /sbin/adb
+		sudo rm -d /usr/bin/adb
 		sudo ln -s `curr_k_project.sh adb_tool` /sbin/adb
+		sudo ln -s `curr_k_project.sh adb_tool` /usr/bin/adb
 		alias kfboot=`curr_k_project.sh fastboot_tool`
-		sudo update-alternatives --set java `curr_k_project.sh java_path`
-		sudo update-alternatives --set javac `curr_k_project.sh javac_path`
+
+		export JAVA_HOME=`curr_k_project.sh java_path`
+		export JAVAC_HOME=`curr_k_project.sh javac_path`
+		export ANDROID_JAVA_HOME=$JAVA_HOME
+		export PATH=$JAVAC_HOME/bin:$JAVA_HOME/bin:$PATH
+
+		sudo rm -d /usr/bin/java /usr/bin/javac /usr/bin/javaws
+		sudo ln -s $JAVAC_HOME/bin/java /usr/bin/java
+		sudo ln -s $JAVAC_HOME/bin/javac /usr/bin/javac
+		sudo ln -s $JAVAC_HOME/bin/javaws /usr/bin/javaws
+
+#		sudo update-alternatives --set java `curr_k_project.sh java_path`
+#		sudo update-alternatives --set javac `curr_k_project.sh javac_path`
 	else
 		echo "The following project file doesn't exists:"
 		echo " $script_dir/$1.sh"
@@ -145,7 +153,7 @@ kbuild(){
 		curr_dir=`pwd`
                 cd `curr_k_project.sh root_folder`
 		kl
-		time ionice -c 2 -n 0 nice make -j4
+		kmake
 		cd $curr_dir
 	fi
 }
