@@ -1,4 +1,4 @@
 
-export http_proxy=http://<username>:<password>@172.20.0.1:8080
-export https_proxy=http://<username>:<password>@172.20.0.1:8080
-export ftp_proxy=http://<username>:<password>@172.20.0.1:8080
+export http_proxy=http://kdyakov:8b50c1f5@172.20.0.1:8080
+export https_proxy=http://kdyakov:8b50c1f5@172.20.0.1:8080
+export ftp_proxy=http://kdyakov:8b50c1f5@172.20.0.1:8080
